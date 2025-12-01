@@ -1,60 +1,92 @@
 #include <iostream>
-#include <sstream>
-#include <vector>
+#include <fstream>
 #include <string>
+#include <vector>
+
 using namespace std;
 
-int main() {
-    cout << "Enter the number of rotation lines, then paste your rotations:" << endl;
+struct Rotation {
+    char direction;
+    int distance;
+};
 
-    int numLines;
-    cin >> numLines;
-    cin.ignore();
+int countZeroCrossings(int start, char direction, int distance) {
+    int count = 0;
+    int current = start;
 
-    vector<string> lines;
-    string line;
-    for (int i = 0; i < numLines; ++i) {
-        getline(cin, line);
-        // Trim whitespace
-        line.erase(0, line.find_first_not_of(" \t\r\n"));
-        line.erase(line.find_last_not_of(" \t\r\n") + 1);
-        if (!line.empty()) lines.push_back(line);
-    }
-
-    cout << "\nProcessing " << lines.size() << " rotations...\n" << endl;
-
-    int dial = 50;
-    int password = 0;
-
-    cout << "Starting position: " << dial << endl << endl;
-
-    for (size_t i = 0; i < lines.size(); ++i) {
-        string &s = lines[i];
-
-        char direction = s[0];
-        int distance = stoi(s.substr(1));
-
-        // Apply rotation
+    for (int i = 0; i < distance; i++) {
         if (direction == 'L') {
-            dial -= distance;
-        } else if (direction == 'R') {
-            dial += distance;
+            current = (current - 1 + 100) % 100;
+        } else {
+            current = (current + 1) % 100;
         }
 
-        // Handle wrap-around (ensure dial is in range 0-99)
-        dial = ((dial % 100) + 100) % 100;
-
-        cout << "After " << s << ": dial points at " << dial << endl;
-
-        // Check if dial points at 0
-        if (dial == 0) {
-            password++;
+        if (current == 0) {
+            count++;
         }
     }
 
-    cout << "\n====================" << endl;
-    cout << "Password (times dial hit 0): " << password << endl;
-    cout << "Final dial position: " << dial << endl;
+    return count;
+}
+
+int main() {
+    ifstream input("input.txt");
+
+    if (!input.is_open()) {
+        cerr << "Error opening input file!" << endl;
+        return 1;
+    }
+
+    vector<Rotation> rotations;
+    string line;
+
+    // Read all rotations
+    while (getline(input, line)) {
+        if (!line.empty()) {
+            Rotation rot;
+            rot.direction = line[0];
+            rot.distance = stoi(line.substr(1));
+            rotations.push_back(rot);
+        }
+    }
+
+    input.close();
+
+    // Part 1: Count times dial ends at 0
+    int current = 50;
+    int part1_count = 0;
+
+    for (const auto& rot : rotations) {
+        if (rot.direction == 'L') {
+            current = (current - rot.distance % 100 + 100) % 100;
+        } else {
+            current = (current + rot.distance % 100) % 100;
+        }
+
+        if (current == 0) {
+            part1_count++;
+        }
+    }
+
+    cout << "Part 1 - Times dial ends at 0: " << part1_count << endl;
+
+    // Part 2: Count all times dial points at 0 (including during rotations)
+    current = 50;
+    int part2_count = 0;
+
+    for (const auto& rot : rotations) {
+        int crossings = countZeroCrossings(current, rot.direction, rot.distance);
+        part2_count += crossings;
+
+        // Update current position
+        if (rot.direction == 'L') {
+            current = (current - rot.distance % 100 + 100) % 100;
+        } else {
+            current = (current + rot.distance % 100) % 100;
+        }
+    }
+
+    cout << "Part 2 - Total times dial points at 0: " << part2_count << endl;
 
     return 0;
 }
